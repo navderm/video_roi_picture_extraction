@@ -4,6 +4,7 @@
 int main()
 {
   VideoPictureExtraction vpe;
-  while(1)
-    vpe.LoadAndExtract();
+  // while(1)
+  //   vpe.LoadAndExtract();
+  vpe.BinImagesOnSize();
 }

@@ -165,3 +165,127 @@ void VideoPictureExtraction::LoadAnnotationFile(std::string annotationFile)
       allExtractions[cntr].second.x << ", " << allExtractions[cntr].second.y << std::endl;
 }
 
+void VideoPictureExtraction::BinImagesOnSize()
+{
+  /*
+ ***Create a list of all the images in the directory
+ ***Open all the images in the directory
+    Create a good bin
+    Bin them in ratio of their size
+    Extract a mean for each bin
+    resize all the images
+    Extract HOG features out of the images
+  */
+  std::string filename= "/other/aesop_data/AESOP/phase2data/TrainingPositives/imagelist.txt";
+  std::ifstream imagelistfile(filename.c_str());
+  if (!imagelistfile.is_open())
+    {
+      std::cout  << "Could not open list file ! Have to quit ! " << std::endl;
+      return;
+    }
+
+  std::vector<cv::Mat> allPositiveDataImages;
+  std::string imgFile;
+  int dummy ;
+  imagelistfile >> dummy;
+  while(!imagelistfile.eof())
+    {
+      imagelistfile >> dummy >> imgFile;
+      std::cout << "Image is : " << imgFile << std::endl;
+      cv::Mat image = cv::imread(imgFile, 0);
+      if (image.empty())
+        {
+          std::cout << "The file could not be opened" << std::endl;
+          continue;
+        }
+      // our special case where the images are rectangular
+      assert(image.rows == image.cols) ;
+      allPositiveDataImages.push_back(image);
+    }
+  std::cout << "The size of all PositiveData images is : " << allPositiveDataImages.size() << std::endl;
+
+  // all the images are in the vector. Put them in the multimap.
+  std::multimap<std::string, cv::Mat> imageBins;
+  for (int cntr=0; cntr < allPositiveDataImages.size(); cntr++)
+    {
+      int putIndex =(int)(allPositiveDataImages[cntr].rows / 16);
+      std::string putIndexStr = boost::lexical_cast<std::string>(putIndex);
+      imageBins.insert(std::make_pair(putIndexStr, allPositiveDataImages[cntr]));
+      //       imageBins[putIndexStr] = allPositiveDataImages[cntr];
+    }
+
+  // For each multimap, find the mean size of the images and the no of images in the same
+  int totalcount  = 0;
+  for(std::multimap<std::string,cv::Mat>::iterator it = imageBins.begin(), end = imageBins.end(); it != end; it = imageBins.upper_bound(it->first))
+    {
+      totalcount += imageBins.count(it->first);
+      std::cout << it->first << ":" << imageBins.count(it->first) << std::endl;
+    }
+  std::cout << "Total count is : " << totalcount << std::endl;
+  std::multimap<std::string, cv::Mat> meanedImages;
+  FindMeanOfBins(imageBins, meanedImages);
+
+  for (std::multimap<std::string, cv::Mat>::iterator it = meanedImages.begin(), end = meanedImages.end(); it != end; it++)
+    {
+      std::cout << it->first << " : (" << it->second.rows << ", " << it->second.cols << ")" << std::endl;
+    }
+}
+
+void VideoPictureExtraction::FindMeanOfBins(const std::multimap<std::string, cv::Mat>& imageBins,
+                                            std::multimap<std::string, cv::Mat>& meanedImages)
+{
+  std::multimap<std::string, cv::Mat>::const_iterator it = imageBins.begin();
+  std::multimap<std::string, cv::Mat>::const_iterator it_end = imageBins.end();
+
+  std::vector<std::string> uniqueMembers;
+  for (; it != it_end; it++)
+    {
+      if (uniqueMembers.size() == 0)
+        uniqueMembers.push_back(it->first);
+      if (uniqueMembers.back() != it->first)
+        uniqueMembers.push_back(it->first);
+    }
+
+  // Define a bin with means:
+  std::map <std::string, std::pair<int, int> > meanDim;
+
+  for (int cntr = 0 ; cntr < uniqueMembers.size(); cntr++)
+    {
+      std::cout << uniqueMembers[cntr] << ", ";
+      std::string currentIndex = uniqueMembers[cntr];
+      std::multimap<std::string, cv::Mat>::const_iterator it = imageBins.begin();
+      std::multimap<std::string, cv::Mat>::const_iterator it_end = imageBins.end();
+      int totalcols =0, totalrows = 0, imgCntr = 0;
+      for (; it != it_end; it++)
+        {
+          if (it->first == currentIndex)
+            {
+              totalcols += it->second.cols;
+              totalrows += it->second.rows;
+              imgCntr++;
+            }
+        }
+      totalcols /= imgCntr;
+      totalrows /= imgCntr;
+      std::pair<int ,int> rowcolval = std::pair<int, int>(totalrows, totalcols);
+      std::string cntrStr = boost::lexical_cast<std::string>(cntr);
+      meanDim[cntrStr] = std::pair<int, int> (rowcolval);
+    }
+
+  for (int cntr = 0 ; cntr < uniqueMembers.size(); cntr++)
+    {
+      it = imageBins.begin();
+      it_end = imageBins.end();
+      for (; it != it_end; it++)
+        {
+          std::pair<int, int> rowcolval = meanDim[it->first];
+          cv::Mat resizedIm;
+          if (rowcolval.first == 0 || rowcolval.second == 0)
+            resizedIm = it->second.clone();
+          else
+            cv::resize(it->second, resizedIm, cv::Size(rowcolval.second, rowcolval.first));
+          meanedImages.insert(std::make_pair(it->first, resizedIm));
+        }
+    }
+}
+
