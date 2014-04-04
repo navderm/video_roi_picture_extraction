@@ -15,6 +15,7 @@ FIND_PACKAGE(OpenCV REQUIRED)
 FIND_PACKAGE(Boost REQUIRED)
 
 SET(SRC src/video_picture_extraction.cpp
+        src/sea_vehicles_classifier.cpp
         src/main.cpp)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

@@ -8,6 +8,7 @@ VideoPictureExtraction::~VideoPictureExtraction ()
 {
 }
 
+
 void VideoPictureExtraction::PrepareSVMData()
 {
   std::string filename= "/other/aesop_data/AESOP/phase2data/TrainingPositives/imagelist.txt";
@@ -22,6 +23,7 @@ void VideoPictureExtraction::PrepareSVMData()
     }
 
 }
+
 void VideoPictureExtraction::LoadAndExtract()
 {
   std::cout << "Enter the video file to open :" ;
@@ -188,6 +190,7 @@ void VideoPictureExtraction::BinImagesOnSize(std::string filename, int classType
       return;
     }
 
+  std::vector<std::string> allImagesFileName;
   std::vector<cv::Mat> allImages;
   std::string imgFile;
   int dummy ;
@@ -205,6 +208,7 @@ void VideoPictureExtraction::BinImagesOnSize(std::string filename, int classType
       // our special case where the images are rectangular
       assert(image.rows == image.cols) ;
       allImages.push_back(image);
+      allImagesFileName.push_back(imgFile);
     }
   std::cout << "The size of all PositiveData images is : " << allImages.size() << std::endl;
 
@@ -214,19 +218,34 @@ void VideoPictureExtraction::BinImagesOnSize(std::string filename, int classType
     {
       int putIndex =(int)(allImages[cntr].rows / 16);
       std::string putIndexStr = boost::lexical_cast<std::string>(putIndex);
-      imageBins.insert(std::make_pair(putIndexStr, allImages[cntr]));
+      imageBins.insert(std::make_pair(allImagesFileName[cntr], allImages[cntr]));
     }
 
   // For each multimap, find the mean size of the images and the no of images in the same
-  int totalcount  = 0;
-  for(std::multimap<std::string,cv::Mat>::iterator it = imageBins.begin(), end = imageBins.end(); it != end; it = imageBins.upper_bound(it->first))
-    {
-      totalcount += imageBins.count(it->first);
-      std::cout << it->first << ":" << imageBins.count(it->first) << std::endl;
-    }
-  std::cout << "Total count is : " << totalcount << std::endl;
+  // int totalcount  = 0;
+  // for(std::multimap<std::string,cv::Mat>::iterator it = imageBins.begin(), end = imageBins.end(); it != end; it = imageBins.upper_bound(it->first))
+  //   {
+  //     totalcount += imageBins.count(it->first);
+  //     std::cout << it->first << ":" << imageBins.count(it->first) << std::endl;
+  //   }
+  // std::cout << "Total count is : " << totalcount << std::endl;
+
   std::multimap<std::string, cv::Mat> meanedImages;
   FindMeanOfBins(imageBins, meanedImages);
+  std::cout << "Size of meanedImages : " << meanedImages.size() << std::endl;
+  int cntr = 0 ;
+
+  std::string saveFilename = "/other/aesop_data/AESOP/phase2data/TrainingPositives/ResizedImages/";
+  std::multimap<std::string, cv::Mat>::iterator it = meanedImages.begin();
+  std::multimap<std::string, cv::Mat>::iterator it_end = meanedImages.end();
+  for (; it != it_end; it++)
+    {
+      std::string f = saveFilename + boost::lexical_cast<std::string> (cntr) + ".jpg";
+      cv::imwrite(f, it->second);
+      cntr++;
+    }
+
+  exit(-1);
   imageBins.clear(); // clear it for saving space
 
   // for (std::multimap<std::string, cv::Mat>::iterator it = meanedImages.begin(), end = meanedImages.end(); it != end; it++)
