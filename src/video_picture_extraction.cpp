@@ -8,6 +8,20 @@ VideoPictureExtraction::~VideoPictureExtraction ()
 {
 }
 
+void VideoPictureExtraction::PrepareSVMData()
+{
+  std::string filename= "/other/aesop_data/AESOP/phase2data/TrainingPositives/imagelist.txt";
+  BinImagesOnSize(filename, 1);
+  filename = "/other/aesop_data/mtt_results/phase2data/temp/bg_chips/backgroundimagelist.txt";
+  BinImagesOnSize(filename, -1);
+  std::cout << "The final siz of the the feature vector is : " << m_trainingData.rows << " , " << m_trainingData.cols << std::endl;
+  std::cout << "The final size of the classification set is : " << m_classification.rows << ", " << m_classification.cols << std::endl;
+  for (int row = 0; row < m_classification.rows ; row++)
+    {
+      std::cout << m_classification.at<float>(row, 0) << ", " ;
+    }
+
+}
 void VideoPictureExtraction::LoadAndExtract()
 {
   std::cout << "Enter the video file to open :" ;
@@ -22,7 +36,6 @@ void VideoPictureExtraction::LoadAndExtract()
   LoadAnnotationFile(annotationFile);
   LoadVideoFileAndExtract(videoFile);
 }
-
 
 void VideoPictureExtraction::LoadVideoFileAndExtract(std::string videoFile)
 {
@@ -138,6 +151,7 @@ std::string VideoPictureExtraction::ExtractAnnotationFileName(std::string videoF
   std::cout << "The annotation file : " << annotationFile << std::endl;
   return annotationFile;
 }
+
 void VideoPictureExtraction::LoadAnnotationFile(std::string annotationFile)
 {
   allExtractions.clear();
@@ -165,18 +179,8 @@ void VideoPictureExtraction::LoadAnnotationFile(std::string annotationFile)
       allExtractions[cntr].second.x << ", " << allExtractions[cntr].second.y << std::endl;
 }
 
-void VideoPictureExtraction::BinImagesOnSize()
+void VideoPictureExtraction::BinImagesOnSize(std::string filename, int classType)
 {
-  /*
- ***Create a list of all the images in the directory
- ***Open all the images in the directory
-    Create a good bin
-    Bin them in ratio of their size
-    Extract a mean for each bin
-    resize all the images
-    Extract HOG features out of the images
-  */
-  std::string filename= "/other/aesop_data/AESOP/phase2data/TrainingPositives/imagelist.txt";
   std::ifstream imagelistfile(filename.c_str());
   if (!imagelistfile.is_open())
     {
@@ -184,14 +188,14 @@ void VideoPictureExtraction::BinImagesOnSize()
       return;
     }
 
-  std::vector<cv::Mat> allPositiveDataImages;
+  std::vector<cv::Mat> allImages;
   std::string imgFile;
   int dummy ;
   imagelistfile >> dummy;
   while(!imagelistfile.eof())
     {
       imagelistfile >> dummy >> imgFile;
-      std::cout << "Image is : " << imgFile << std::endl;
+      // std::cout << "Image is : " << imgFile << std::endl;
       cv::Mat image = cv::imread(imgFile, 0);
       if (image.empty())
         {
@@ -200,18 +204,17 @@ void VideoPictureExtraction::BinImagesOnSize()
         }
       // our special case where the images are rectangular
       assert(image.rows == image.cols) ;
-      allPositiveDataImages.push_back(image);
+      allImages.push_back(image);
     }
-  std::cout << "The size of all PositiveData images is : " << allPositiveDataImages.size() << std::endl;
+  std::cout << "The size of all PositiveData images is : " << allImages.size() << std::endl;
 
   // all the images are in the vector. Put them in the multimap.
   std::multimap<std::string, cv::Mat> imageBins;
-  for (int cntr=0; cntr < allPositiveDataImages.size(); cntr++)
+  for (int cntr=0; cntr < allImages.size(); cntr++)
     {
-      int putIndex =(int)(allPositiveDataImages[cntr].rows / 16);
+      int putIndex =(int)(allImages[cntr].rows / 16);
       std::string putIndexStr = boost::lexical_cast<std::string>(putIndex);
-      imageBins.insert(std::make_pair(putIndexStr, allPositiveDataImages[cntr]));
-      //       imageBins[putIndexStr] = allPositiveDataImages[cntr];
+      imageBins.insert(std::make_pair(putIndexStr, allImages[cntr]));
     }
 
   // For each multimap, find the mean size of the images and the no of images in the same
@@ -224,12 +227,180 @@ void VideoPictureExtraction::BinImagesOnSize()
   std::cout << "Total count is : " << totalcount << std::endl;
   std::multimap<std::string, cv::Mat> meanedImages;
   FindMeanOfBins(imageBins, meanedImages);
+  imageBins.clear(); // clear it for saving space
 
-  for (std::multimap<std::string, cv::Mat>::iterator it = meanedImages.begin(), end = meanedImages.end(); it != end; it++)
-    {
-      std::cout << it->first << " : (" << it->second.rows << ", " << it->second.cols << ")" << std::endl;
-    }
+  // for (std::multimap<std::string, cv::Mat>::iterator it = meanedImages.begin(), end = meanedImages.end(); it != end; it++)
+  //   {
+  //     std::cout << it->first << " : (" << it->second.rows << ", " << it->second.cols << ")" << std::endl;
+  //   }
+
+  // create HOG feature vector for each of the image.
+  std::vector<std::pair<cv::Mat, boost::shared_array<float> > > HOGFeatures;
+  ExtractHOGFeatures(meanedImages, HOGFeatures, classType);
+  std::cout << "The total no of HOG extracted : " << HOGFeatures.size() << std::endl;
+  std::cout << "Size of the initial images : " << meanedImages.size() << std::endl;
 }
+
+// void VideoPictureExtraction::VisualizeHOG(std::vector<std::pair<cv::Mat, boost::shared_array<float> > >& HOGFeatures)
+// {
+//   std::vector<std::pair<cv::Mat, boost::shared_array<float> > >::iterator it = HOGFeatures.begin ();
+//   std::vector<std::pair<cv::Mat, boost::shared_array<float> > >::iterator it_end = HOGFeatures.end();
+
+//   for( ; it != it_end ; it++)
+//     {
+//       cv::Mat image = it->first;
+//       float* features = it->second.get();
+
+//     }
+// }
+
+
+void VideoPictureExtraction::TestHOG()
+{
+  cv::Mat img  = cv::imread("/net/home/neeraj.jhawar/Desktop/test.jpg", 0);
+  if (img.empty())
+    std::cout << "Problem loading image " << std::endl;
+  std::multimap<std::string, cv::Mat> immage;
+  std::string temp = "DDD" ;
+  immage.insert(std::make_pair(temp, img));
+  std::vector<std::pair<cv::Mat, boost::shared_array<float> > > tempd;
+  ExtractHOGFeatures(immage, tempd, 1);
+  return;
+}
+
+void VideoPictureExtraction::TrainLinearSVM(std::vector<std::pair<cv::Mat,
+                                                                  boost::shared_array<float> > >& HOGFeatures)
+{
+  cv::Mat allFeatures;
+  std::vector<std::pair<cv::Mat, boost::shared_array<float> > >::iterator it = HOGFeatures.begin();
+  std::vector<std::pair<cv::Mat, boost::shared_array<float> > >::iterator it_end = HOGFeatures.end();
+
+  CvSVMParams params;
+  params.svm_type = CvSVM::C_SVC;
+  params.kernel_type = CvSVM::RBF;
+  params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100,  1e-6);
+  params.C = 5.0;
+  params.gamma = 0.5;
+
+
+  //  convert the data to cv::Mat format
+
+  // cv::Mat features
+  // //  Train the SVM
+  // m_svm.train();
+}
+
+void VideoPictureExtraction::TestImgConversion()
+{
+
+}
+
+void VideoPictureExtraction::ConvertFeaturesToSVMMat(float* ptr,
+                                                     int height, int width, int dimen,
+                                                     cv::Mat& featureMat,
+                                                     int classType, cv::Mat& classMat)
+{
+  featureMat.create(height * width, dimen, CV_32FC1);
+  for (int row = 0 ; row < height; row++)
+    {
+      for (int col = 0  ; col < width; col++)
+        {
+          for (int ch = 0 ; ch < dimen; ch++)
+            {
+              featureMat.at<float>(row * width + col, ch) =
+                ptr[row * (dimen * width) + col * (dimen) + ch];
+            }
+        }
+    }
+
+  classMat.create(height * width, 1, CV_32FC1);
+  for (int row = 0; row < height ; row++)
+    {
+    for (int col = 0 ; col < width; col++)
+      {
+        classMat.at<float>(row * width + col , 0) = classType;
+      }
+    }
+
+  // std::cout << "The size of the final feature mat is : " << featureMat.rows <<
+  //   " , " << featureMat.cols << " , " << featureMat.channels() << std::endl;
+  // std::cout << "The size of the main classifier is : " << classMat.rows <<
+  //   ", " << classMat.cols << std::endl;
+  return;
+}
+
+void VideoPictureExtraction::ExtractHOGFeatures(const std::multimap<std::string, cv::Mat>& images,
+                                                std::vector< std::pair<cv::Mat, boost::shared_array<float> > >& HOGFeatures, int classType)
+{
+  int totalimages = images.size();
+  // this is the no. of hog features that need to be counted !
+  std::vector<vlfeat::VlHog*> allHOGFeatures;
+  std::multimap<std::string, cv::Mat>::const_iterator it = images.begin();
+  std::multimap<std::string, cv::Mat>::const_iterator it_end = images.end();
+
+  for (; it != it_end; it++)
+    {
+      // we'll find the hog features for an image here
+      cv::Mat img = it->second;
+      vlfeat::VlHog *hog = vlfeat::vl_hog_new(vlfeat::VlHogVariantDalalTriggs,
+                                              (vlfeat::vl_size)8, false);
+      cv::Mat_<float> fImg;
+      img.convertTo(fImg, CV_32FC3);
+      std::cout << "img.size : " << img.rows << " , " << img.cols << std::endl;
+      std::cout << "fImg.size :" << fImg.rows << ", " << fImg.cols << std::endl;
+      vlfeat::vl_hog_put_image(hog, (float*)fImg.ptr(0), fImg.cols, fImg.rows,
+                               fImg.channels(), 8);
+      int hogWidth = vlfeat::vl_hog_get_width(hog);
+      int hogHeight = vlfeat::vl_hog_get_height(hog);
+      int hogDimensions = vlfeat::vl_hog_get_dimension(hog);
+      std::cout << "Specifications are : " << hogWidth << " , " << hogHeight << " , " << hogDimensions << std::endl;
+      // boost::shared_array<float> features (new float(hogWidth * hogHeight * hogDimensions));
+      float * features = (float*)malloc(hogWidth * hogHeight * hogDimensions * sizeof(float));
+      vlfeat::vl_hog_extract(hog, features);
+      // We got the features;
+      cv::Mat_<float> featureMat;
+      cv::Mat_<float> classMat;
+      ConvertFeaturesToSVMMat(features, hogHeight, hogWidth, hogDimensions,
+                              featureMat, classType, classMat);
+      m_trainingData.push_back(featureMat);
+      m_classification.push_back(classMat);
+
+      std::cout << "The size of the final feature mat is : " << featureMat.rows <<
+        " , " << featureMat.cols << " , " << featureMat.channels() << std::endl;
+
+      boost::shared_array<float> featuresPtr(features);
+      std::pair<cv::Mat, boost::shared_array<float> > p(img, featuresPtr);
+
+      // Make an image out of it and then try to save it. That will be used for
+      // training the svm
+      cv::Mat_<float> HOGImg(hogHeight, hogWidth, features);
+      HOGFeatures.push_back(p);
+
+
+      // visualize the HOG features
+      // int glyphSize = vlfeat::vl_hog_get_glyph_size(hog);
+      // std::cout << "GlyphSize : " << glyphSize << std::endl;
+      // int imageHeight = glyphSize * hogHeight;
+      // int imageWidth = glyphSize * hogWidth;
+      // std::cout << "show image data :" << imageHeight << ", " << imageWidth << std::endl;
+      // float * image = (float*)malloc (sizeof(float) * imageWidth * imageHeight);
+      // vlfeat::vl_hog_render(hog, image, features, hogWidth, hogHeight);
+
+      // cv::Mat_<float> tempImg(imageHeight, imageWidth, image);
+
+      // std::cout << tempImg.rows << " : " << tempImg.cols  << std::endl;
+      // cv::imshow("HOG", tempImg);
+      // cv::imshow("IMAGE", img);
+      // cv::waitKey(-1);
+      vlfeat::vl_hog_delete(hog);
+    }
+  std::cout << "================================================================================" << std::endl;
+  std::cout << "The size of the feature vector is : " << m_trainingData.rows << ", " << m_trainingData.cols << std::endl;
+  std::cout << "The size of the classification vector is : " << m_classification.rows << ", " << m_classification.cols << std::endl;
+
+}
+
+
 
 void VideoPictureExtraction::FindMeanOfBins(const std::multimap<std::string, cv::Mat>& imageBins,
                                             std::multimap<std::string, cv::Mat>& meanedImages)
@@ -265,8 +436,9 @@ void VideoPictureExtraction::FindMeanOfBins(const std::multimap<std::string, cv:
               imgCntr++;
             }
         }
-      totalcols /= imgCntr;
-      totalrows /= imgCntr;
+      totalrows = 16 + 16 * cntr ; // totalrows /= imgCntr;
+      totalcols = 16 + 16 * cntr; // totalcols /= imgCntr;
+
       std::pair<int ,int> rowcolval = std::pair<int, int>(totalrows, totalcols);
       std::string cntrStr = boost::lexical_cast<std::string>(cntr);
       meanDim[cntrStr] = std::pair<int, int> (rowcolval);

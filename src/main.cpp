@@ -6,5 +6,7 @@ int main()
   VideoPictureExtraction vpe;
   // while(1)
   //   vpe.LoadAndExtract();
-  vpe.BinImagesOnSize();
+  // vpe.BinImagesOnSize();
+  vpe.PrepareSVMData();
+  // vpe.TestHOG();
 }

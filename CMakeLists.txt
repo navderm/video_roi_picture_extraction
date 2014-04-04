@@ -20,9 +20,14 @@ SET(SRC src/video_picture_extraction.cpp
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-include_directories(${PROJECT_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
+include_directories(${PROJECT_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS} "/other/workspace")
+# link_directories(/other/workspace/vlfeat/bin/glnxa64)
 
 # add_library(${PROJECT_NAME} ${SRC})
 add_executable(${PROJECT_NAME} ${SRC})
 # set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${perception_kit_VERSION})
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${Boost_LIBS})
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${Boost_LIBS}
+  /other/workspace/vlfeat/bin/glnxa64/libvl.so
+)
+
+
