@@ -397,20 +397,22 @@ void VideoPictureExtraction::ExtractHOGFeatures(const std::multimap<std::string,
 
 
       // visualize the HOG features
-      // int glyphSize = vlfeat::vl_hog_get_glyph_size(hog);
-      // std::cout << "GlyphSize : " << glyphSize << std::endl;
-      // int imageHeight = glyphSize * hogHeight;
-      // int imageWidth = glyphSize * hogWidth;
-      // std::cout << "show image data :" << imageHeight << ", " << imageWidth << std::endl;
-      // float * image = (float*)malloc (sizeof(float) * imageWidth * imageHeight);
-      // vlfeat::vl_hog_render(hog, image, features, hogWidth, hogHeight);
 
-      // cv::Mat_<float> tempImg(imageHeight, imageWidth, image);
+      int glyphSize = vlfeat::vl_hog_get_glyph_size(hog);
+      std::cout << "GlyphSize : " << glyphSize << std::endl;
+      int imageHeight = glyphSize * hogHeight;
+      int imageWidth = glyphSize * hogWidth;
+      std::cout << "show image data :" << imageHeight << ", " << imageWidth << std::endl;
+      float * image = (float*)malloc (sizeof(float) * imageWidth * imageHeight);
+      vlfeat::vl_hog_render(hog, image, features, hogWidth, hogHeight);
 
-      // std::cout << tempImg.rows << " : " << tempImg.cols  << std::endl;
-      // cv::imshow("HOG", tempImg);
-      // cv::imshow("IMAGE", img);
-      // cv::waitKey(-1);
+      cv::Mat_<float> tempImg(imageHeight, imageWidth, image);
+
+      std::cout << tempImg.rows << " : " << tempImg.cols  << std::endl;
+      cv::imshow("HOG", tempImg);
+      cv::imshow("IMAGE", img);
+      cv::waitKey(-1);
+
       vlfeat::vl_hog_delete(hog);
     }
   std::cout << "================================================================================" << std::endl;

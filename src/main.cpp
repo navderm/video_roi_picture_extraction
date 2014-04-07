@@ -4,15 +4,12 @@
 
 int main()
 {
-  //   VideoPictureExtraction vpe;
-  SeaVehiclesClassifier svc;
-  // while(1)
-  //   vpe.LoadAndExtract();
-  std::string filename= "/other/aesop_data/AESOP/phase2data/TrainingPositives/imagelist.txt";
-  // vpe.BinImagesOnSize(filename, 1);
-  // vpe.PrepareSVMData();
-  // vpe.TestHOG();
+   VideoPictureExtraction vpe;
+  while(1)
+    vpe.LoadAndExtract();
 
+  // SeaVehiclesClassifier svc;
+  // std::string filename= "/other/aesop_data/AESOP/phase2data/TrainingPositives/imagelist.txt";
   // svc.SaveBinedImage(filename);
   svc.RunAll();
 }

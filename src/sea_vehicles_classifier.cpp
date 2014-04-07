@@ -244,6 +244,39 @@ void SeaVehiclesClassifier::TrainSVM(int imgSize)
   std::cout << "Saved File ! " << std::endl;
 }
 
+void SeaVehiclesClassifier::PredictSVM(std::string filename)
+{
+  cv::Mat testImg = cv::imread(filename, 0);
+  if (testImg.empty())
+    std::cout << "Could not find the image !" << std::endl;
+  int row = testImg.rows;
+  if (row == 0)
+    return;
+  int rowFactor = testImg.rows % 16;
+  int finalRow = row + (16 - rowFactor);
+
+  cv::Mat resizedTestIm;
+  cv::resize(testImg, resizedTestIm, cv::Size(finalRow, finalRow));
+  std::cout << "Final test image size is : " << resizedTestIm.rows << ", " << resizedTestIm.cols << std::endl;
+
+  std::vector<cv::Mat> testImgVec;
+  testImgVec.push_back(resizedTestIm);
+
+  std::vector<HOGDescription> testImgHOGs;
+  GenerateHOGFeatures(testImgVec, testImgHOGs);
+
+  cv::Mat featureMat; cv::Mat classMatUnuse;
+  ConvertFeaturesToSVMMat(testImgHOGs[0].descriptors,
+                          testImgHOGs[0].height,
+                          testImgHOGs[0].width,
+                          testImgHOGs[0].dimensions,
+                          featureMat,
+                          0, classMatUnuse);
+  // open the right svm file for testing
+  std::string folder = "/other/workspace/VideoPictureExtraction/svms/" + 
+    boost::lexical_cast<std::string>(testImg.rows) + ".svm";
+}
+
 
 void SeaVehiclesClassifier::SaveBinedImage(std::string listName)
 {

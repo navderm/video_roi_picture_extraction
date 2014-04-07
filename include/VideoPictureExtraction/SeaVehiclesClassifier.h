@@ -63,7 +63,7 @@ public:
                                cv::Mat& featureMat, int classType,
                                cv::Mat& classMat);
   void TrainSVM(int imgSize);
-
+  void PredictSVM(std::string filename);
 
   void SaveBinedImage(std::string filename);
 
