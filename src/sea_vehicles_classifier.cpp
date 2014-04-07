@@ -87,7 +87,7 @@ void SeaVehiclesClassifier::LoadPositiveImages(std::string listName, int imgSize
       if (posFiles.eof())
         break;
       cv::Mat image = cv::imread(imgFile, 0);
-      assert(!image.rows % 16); // no remainder left
+      assert(!(image.rows % 16)); // no remainder left
       if (image.rows == imgSize)
         {
           // Only work for this particular image size in this iteration
@@ -100,6 +100,7 @@ void SeaVehiclesClassifier::LoadPositiveImages(std::string listName, int imgSize
 
 void SeaVehiclesClassifier::LoadNegativeImages(std::string listName, int imgSize)
 {
+
   // clear the previous stash
   m_negImages.clear();
 
@@ -120,7 +121,8 @@ void SeaVehiclesClassifier::LoadNegativeImages(std::string listName, int imgSize
       if (posFiles.eof())
         break;
       cv::Mat image = cv::imread(imgFile, 0);
-      assert(!image.rows % 16); // no remainder left
+      std::cout << "Image rows : " << image.rows << std::endl;
+      assert(! (image.rows % 16)); // no remainder left
       if (image.rows == imgSize)
         {
           // Only work for this particular image size in this iteration
@@ -167,6 +169,27 @@ void SeaVehiclesClassifier::GenerateHOGFeatures(std::vector<cv::Mat> & imageVect
       newDesc.height = hogHeight;
       newDesc.dimensions = hogDimensions;
       descriptions.push_back(newDesc);
+
+      // visualize the HOG features
+
+      if (SHOWIMAGES)
+        {
+          int glyphSize = vlfeat::vl_hog_get_glyph_size(hog);
+          std::cout << "GlyphSize : " << glyphSize << std::endl;
+          int imageHeight = glyphSize * hogHeight;
+          int imageWidth = glyphSize * hogWidth;
+          std::cout << "show image data :" << imageHeight << ", " << imageWidth << std::endl;
+          float * image = (float*)malloc (sizeof(float) * imageWidth * imageHeight);
+          vlfeat::vl_hog_render(hog, image, features, hogWidth, hogHeight);
+
+          cv::Mat_<float> tempImg(imageHeight, imageWidth, image);
+          std::cout << tempImg.rows << " : " << tempImg.cols  << std::endl;
+
+          cv::imshow("HOG", tempImg);
+          cv::imshow("IMAGE", *it);
+          cv::waitKey(-1);
+        }
+      vlfeat::vl_hog_delete(hog);
     }
 }
 
@@ -273,7 +296,7 @@ void SeaVehiclesClassifier::PredictSVM(std::string filename)
                           featureMat,
                           0, classMatUnuse);
   // open the right svm file for testing
-  std::string folder = "/other/workspace/VideoPictureExtraction/svms/" + 
+  std::string folder = "/other/workspace/VideoPictureExtraction/svms/" +
     boost::lexical_cast<std::string>(testImg.rows) + ".svm";
 }
 

@@ -8,7 +8,6 @@ VideoPictureExtraction::~VideoPictureExtraction ()
 {
 }
 
-
 void VideoPictureExtraction::PrepareSVMData()
 {
   std::string filename= "/other/aesop_data/AESOP/phase2data/TrainingPositives/imagelist.txt";
@@ -238,14 +237,13 @@ void VideoPictureExtraction::BinImagesOnSize(std::string filename, int classType
   std::string saveFilename = "/other/aesop_data/AESOP/phase2data/TrainingPositives/ResizedImages/";
   std::multimap<std::string, cv::Mat>::iterator it = meanedImages.begin();
   std::multimap<std::string, cv::Mat>::iterator it_end = meanedImages.end();
-  for (; it != it_end; it++)
-    {
-      std::string f = saveFilename + boost::lexical_cast<std::string> (cntr) + ".jpg";
-      cv::imwrite(f, it->second);
-      cntr++;
-    }
+  // for (; it != it_end; it++)
+  //   {
+  //     std::string f = saveFilename + boost::lexical_cast<std::string> (cntr) + ".jpg";
+  //     cv::imwrite(f, it->second);
+  //     cntr++;
+  //   }
 
-  exit(-1);
   imageBins.clear(); // clear it for saving space
 
   // for (std::multimap<std::string, cv::Mat>::iterator it = meanedImages.begin(), end = meanedImages.end(); it != end; it++)

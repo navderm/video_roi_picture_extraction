@@ -15,6 +15,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/shared_array.hpp>
 
+#define SHOWIMAGES 0
 // include all the vlfeat stuff in vlfeat namespace
 
 namespace vlfeat
